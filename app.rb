@@ -2,9 +2,10 @@ require 'rubygems'
 require 'twilio-ruby'
 require 'sinatra'
 
-get '/sms-quickstart' do
+get '/search' do
+  message = params[:Body]
   twiml = Twilio::TwiML::Response.new do |r|
-    r.Message "Hey Guy. Thanks for the message!"
+    r.Message "Hey Guy. Thanks for sending #{message}!"
   end
   twiml.text
 end
