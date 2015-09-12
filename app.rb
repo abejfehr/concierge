@@ -2,22 +2,67 @@ require 'rubygems'
 require 'twilio-ruby'
 require 'sinatra'
 require 'weather-underground'
-#%w(rubygems wordnik).each {|lib| require lib}
-
-#Wordnik.configure do |config|
-#  config.api_key = 'YOUR_API_KEY_HERE'
-#end
+require 'ruby-units'
+require 'wikipedia'
+require 'dictionary_lookup'
 
 # Specify that we're going to use the Weather Underground API(no key somehow)
 w = WeatherUnderground::Base.new
 
-# http://api.wordnik.com:80/v4/word.json/pace/definitions?limit=3&includeRelated=true&sourceDictionaries=webster&useCanonical=true&includeTags=false&api_key=a2a73e7b926c924fad7001ca3111acd55af2ffabf50eb4ae5
 get '/search' do
-  place = params[:Body]
-  currentWeather = w.CurrentObservations(place)
+  input = params[:Body]
+  puts "The input was: #{input}"
+  ### WEATHER ###
+  if input and match = input.match(/^[weather|wx]+[ ]*([forecast|fc]*) ([\w ,.-]+)/i)
+    forecast, location = match.captures
+    puts "Location: #{location}"
+    puts "Forecast: #{forecast}"
+    if location and forecast != ""
+      wxForecast = w.SimpleForecast(location)
+      message = "Forecast is not *quite* supported yet"
+    elsif location
+      wxCurrent = w.CurrentObservations(location)
+      puts "WX: #{wxCurrent.inspect}"
+      message = "Current temp in #{wxCurrent.display_location[0].full}: #{wxCurrent.temp_c} °C"
+    end
+  end
+  ### DEFINITIONS ###
+  if input and match = input.match(/^[define|definition of]+ ([\w -]+)/i)
+    puts "Word: #{match.captures[0]}"
+    results = DictionaryLookup::Base.define(match.captures[0])
+    puts "#{results.inspect}"
+    message = "#{results.first.part_of_speech} - #{results.first.denotation}"
+  end
+  ### UNIT CONVERSIONS ###
+  if input and match = input.match(/([\d]+[ ]*[ \w]+|\d'\d") [in|to]+ ([\w ]+)/i)
+    from, to = match.captures
+    unitFrom = from.to_unit
+    unitTo = to.to_unit
+    if unitFrom =~ unitTo
+      message = "#{unitFrom.convert_to(to)}"
+    else
+      message = "Those units are incompatible"
+    end
+  end
+  ### SPORTS SCORES ###
+  #if input and match = input.match()
+
+  #end
+  ### WIKI ###
+  if input and match = input.match(/^[wiki|wikipedia]+ ([\w ]+)/i)
+    term = match.captures[0]
+    puts "Term: #{term}"
+    page = Wikipedia.find(term)
+    message = "#{page.text}"
+  end
+  ### BASE CASE ###
+  if !message
+    message = "Sorry, I didn't understand that."
+  end
+  puts "The response is: #{message}"
+  # Send the user's reply
   twiml = Twilio::TwiML::Response.new do |r|
-    #definitions = Wordnik.word.get_definitions(word)
-    r.Message "Current temp in #{currentWeather.display_location[0].full}: #{currentWeather.temp_c} °C"
+    r.Message message.length > 140 ? message[0..140] : message
   end
   twiml.text
 end
