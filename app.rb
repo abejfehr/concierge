@@ -53,7 +53,11 @@ get '/search' do
     term = match.captures[0]
     puts "Term: #{term}"
     page = Wikipedia.find(term)
-    message = "#{page.text}"
+    if !page.text or page.text == ""
+      message = "Sorry, no page was found with a title related to #{term}"
+    else
+      message = "#{page.text}"
+    end
   end
   ### BASE CASE ###
   if !message
