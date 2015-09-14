@@ -4,7 +4,7 @@ Bringing back Google SMS.
 
 ## Things you can do
 
-Simply text `(613) 209-3799` with your message and see the result
+Once your number is *verified*, simply text `(613) 209-3799` with your message and see the result
 
 ### Word Definitions
 
